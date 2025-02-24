@@ -1,45 +1,64 @@
-import scipy.cluster.hierarchy as sch
+
+from scipy.cluster.hierarchy import dendrogram, linkage
+from save import save_matrix
+from visualization import visualize_matrix
+from utils import is_ultrametric
 import matplotlib.pyplot as plt
-from scipy.cluster.hierarchy import fcluster
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+from input import input_matrix_manually, generate_ultrametric, load_matrix_from_file
+import time
+def main():
+  print("Выберите способ создания матрицы:")
+  print("1. Ввести матрицу вручную")
+  print("2. Сгенерировать матрицу")
+  print("3. Загрузить матрицу из файла")
+  choice = input("Ваш выбор (1/2/3): ")
 
+  if choice == "1":
+    ultrametric_matrix = input_matrix_manually()
+  elif choice == "2":
+    start_time = time.time()
+    ultrametric_matrix = generate_ultrametric()
+    while not is_ultrametric(ultrametric_matrix):
+      ultrametric_matrix = generate_ultrametric()
+    end_time = time.time()
+    print(f"Время поиска матрицы: {end_time - start_time:.4f} секунд")
+  elif choice == "3":
+    ultrametric_matrix = load_matrix_from_file()
+    while not is_ultrametric(ultrametric_matrix):
+      if is_ultrametric(ultrametric_matrix) == False:
+        print("матрица не ультраметрична!")
+    if ultrametric_matrix is None:
+      return
+  else:
+    print("Неверный выбор!")
+    return
 
+  print("\nМатрица успешно создана/загружена:")
+  print(ultrametric_matrix)
 
+  if choice == "1" or choice == "2":
+    save_choice = input("Хотите сохранить матрицу в файл? (y/n): ").lower()
+    if save_choice == "y":
+      save_matrix(ultrametric_matrix)
 
+  print(ultrametric_matrix)
+  # Тепловая карта
+  visualize_matrix(ultrametric_matrix)
 
-# Пример данных
-data = [[0,0], [0,3] , [4,3]]
+  # Преобразуем матрицу расстояний в сжатую форму (condensed form)
+  from scipy.spatial.distance import squareform
+  condensed_matrix = squareform(ultrametric_matrix)
 
-# Преобразуем вложенный список в массив NumPy
-np_array = np.array(data)
-# Проверяем размерность
-cols,rows = np_array.shape
-if rows == 2 and cols > 0: # Условие: 2 строки и хотя бы один столбец
-  # Разделяем данные на координаты x и y
-  x = np.array([point[0] for point in data])
-  y = np.array([point[1] for point in data])
-  # Построение графика
-  plt.plot(x, y, 'o') # 'o' указывает на отображение точками
+  # Выполняем иерархическую кластеризацию методом Complete
+  Z = linkage(condensed_matrix, method='complete')
 
-  # Настройка графика (необязательно)
-  plt.xlabel("Ось X")
-  plt.ylabel("Ось Y")
-  plt.title("График точек")
-  plt.grid(True) # Добавление сетки
-
-  # Отображение графика
+  # Визуализируем дендрограмму
+  plt.figure(figsize=(10, 5))
+  dendrogram(Z)
+  plt.title('Дендрограмма иерархической кластеризации (Complete)')
+  plt.xlabel('Индекс точки')
+  plt.ylabel('Расстояние')
   plt.show()
 
-  Z = sch.linkage(data, method='single', optimal_ordering=True)
-  np.set_printoptions(suppress=True)  # подавляет научную нотацию
-  print(Z)
-
-  # Обрезка дендрограммы для получения 2 кластеров
-  clusters = fcluster(Z, 2, criterion='maxclust')
-  print(clusters)
-  # Построение дендрограммы
-  plt.figure(figsize=(10, 7))
-  sch.dendrogram(Z, p=5, truncate_mode='level')
-  plt.show()
+if __name__ == "__main__":
+    main()
