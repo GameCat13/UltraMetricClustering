@@ -20,8 +20,7 @@ def input_matrix_manually():
     return np.array(matrix)
 
 # Генерация ультраметрической матрицы расстояний
-def generate_ultrametric():
-    n = int(input("Введите размерность матрицы (n): "))
+def generate_ultrametric(n):
     matrix = np.zeros((n, n))
     for i in range(n):
         for j in range(i + 1, n):

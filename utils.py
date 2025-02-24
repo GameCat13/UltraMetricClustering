@@ -8,6 +8,7 @@ def is_ultrametric(matrix):
             for k in range(n):
                 if k == i or k == j:
                     continue  # Пропускаем случаи, когда k совпадает с i или j
-                if matrix[i, j] > max(matrix[i, k], matrix[k, j]):
+                if matrix[i, j] > max(matrix[i, k], matrix[j, k]):
                     return False
     return True
+

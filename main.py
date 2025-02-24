@@ -28,10 +28,11 @@ def main():
     if choice == "1":
         ultrametric_matrix = input_matrix_manually()
     elif choice == "2":
+        n = int(input("Введите размерность матрицы (n): "))
         start_time = time.time()
-        ultrametric_matrix = generate_ultrametric()
+        ultrametric_matrix = generate_ultrametric(n)
         while not is_ultrametric(ultrametric_matrix):
-            ultrametric_matrix = generate_ultrametric()
+            ultrametric_matrix = generate_ultrametric(n)
         end_time = time.time()
         print(f"Время поиска матрицы: {end_time - start_time:.4f} секунд")
     elif choice == "3":
