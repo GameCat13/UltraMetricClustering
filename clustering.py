@@ -40,7 +40,46 @@ def minimax_distance(cluster1, cluster2, distance_matrix):
     max_dist = np.max(distances)
     return (min_dist + max_dist) / 2
 
-def custom_linkage(distance_matrix, method):
+
+def median_distance(cluster1, cluster2, distance_matrix):
+    """
+    Вычисляет расстояние между двумя кластерами на основе медианного метода.
+    :param cluster1: Первый кластер (список индексов объектов).
+    :param cluster2: Второй кластер (список индексов объектов).
+    :param distance_matrix: Матрица расстояний между объектами.
+    :return: Расстояние между кластерами.
+    """
+    # Если один из кластеров пуст, возвращаем 0
+    if len(cluster1) == 0 or len(cluster2) == 0:
+        return 0.0
+
+    # Если оба кластера содержат по одной точке, возвращаем расстояние между ними
+    if len(cluster1) == 1 and len(cluster2) == 1:
+        return distance_matrix[cluster1[0], cluster2[0]]
+
+    # Если один кластер содержит одну точку, а другой — две точки
+    if len(cluster1) == 1 and len(cluster2) == 2:
+        # Формируем треугольник из точки cluster1 и двух точек cluster2
+        triangle_distances = [
+            distance_matrix[cluster1[0], cluster2[0]],
+            distance_matrix[cluster1[0], cluster2[1]],
+            distance_matrix[cluster2[0], cluster2[1]]
+        ]
+        # Вычисляем медиану расстояний в треугольнике
+        return np.median(triangle_distances)
+
+    # Если оба кластера содержат по две точки
+    if len(cluster1) == 2 and len(cluster2) == 2:
+        # Вычисляем все попарные расстояния между точками из двух кластеров
+        distances = distance_matrix[np.ix_(cluster1, cluster2)]
+        # Вычисляем медиану всех расстояний
+        return np.median(distances)
+
+    # Для кластеров с большим количеством точек
+    distances = distance_matrix[np.ix_(cluster1, cluster2)]
+    return np.median(distances)
+
+def custom_linkage(distance_matrix, method, verbose=False):
     """
     Выполняет иерархическую кластеризацию с использованием пользовательского метода.
     :param distance_matrix: Матрица расстояний между объектами.
@@ -58,9 +97,10 @@ def custom_linkage(distance_matrix, method):
 
     while len(clusters) > 1:
         step += 1
-        print(f"\nШаг {step}:")
-        # Замеряем время начала шага
-        start_time = time.time()
+        if verbose:
+            print(f"\nШаг {step}:")
+            # Замеряем время начала шага
+            start_time = time.time()
 
         min_dist = float('inf')
         best_i, best_j = -1, -1
@@ -74,7 +114,7 @@ def custom_linkage(distance_matrix, method):
 
                 # Вычисляем расстояние между кластерами
                 dist = method(cluster1_indices, cluster2_indices, distance_matrix)
-                if dist < min_dist:
+                if dist <= min_dist:
                     min_dist = dist
                     best_i, best_j = i, j
 
@@ -91,8 +131,9 @@ def custom_linkage(distance_matrix, method):
         Z.append([clusters[best_i].id, clusters[best_j].id, min_dist, new_cluster.size])
 
         # Выводим информацию о шаге до удаления кластеров
-        print(f"Объединяем кластеры {clusters[best_i].id} и {clusters[best_j].id} в новый кластер {new_cluster.id}")
-        print(f"Расстояние между кластерами: {min_dist}")
+        if verbose:
+            print(f"Объединяем кластеры {clusters[best_i].id} и {clusters[best_j].id} в новый кластер {new_cluster.id}")
+            print(f"Расстояние между кластерами: {min_dist}")
 
         # Удаляем объединенные кластеры и добавляем новый
         clusters = [cluster for idx, cluster in enumerate(clusters) if idx not in (best_i, best_j)]
@@ -112,11 +153,12 @@ def custom_linkage(distance_matrix, method):
                     new_distances[i, j] = current_distances[i, j]
         current_distances = new_distances
         # Выводим текущие кластеры и матрицу связей Z
-        print(f"Текущие кластеры: {clusters}")
-        print(f"Матрица связей Z: [[{Z[0][0]}, {Z[0][1]}, {Z[0][2]:.4f}, {Z[0][3]}]]")
-        # Замеряем время окончания шага и выводим время выполнения
-        end_time = time.time()
-        print(f"Время выполнения шага: {end_time - start_time:.4f} секунд")
+        if verbose:
+            print(f"Текущие кластеры: {clusters}")
+            print(f"Матрица связей Z: [[{Z[0][0]}, {Z[0][1]}, {Z[0][2]:.4f}, {Z[0][3]}]]")
+            # Замеряем время окончания шага и выводим время выполнения
+            end_time = time.time()
+            print(f"Время выполнения шага: {end_time - start_time:.4f} секунд")
     return np.array(Z)
 
 def _get_cluster_indices(node):
@@ -128,3 +170,23 @@ def _get_cluster_indices(node):
     if node.left is None and node.right is None:
         return [node.id]
     return _get_cluster_indices(node.left) + _get_cluster_indices(node.right)
+
+import numpy as np
+
+def create_ultrametric_distance_matrix(Z, n):
+    """
+    Создаёт ультраметрическую матрицу расстояний на основе финальной матрицы связей Z.
+    :param Z: Матрица связей, полученная в результате иерархической кластеризации.
+    :param n: Количество исходных объектов.
+    :return: Ультраметрическая матрица расстояний.
+    """
+    # Высота последнего объединения (последняя строка, третий столбец)
+    ultrametric_distance = Z[-1, 2]
+
+    # Создаём матрицу расстояний
+    distance_matrix = np.full((n, n), ultrametric_distance)
+
+    # Заполняем диагональ нулями
+    np.fill_diagonal(distance_matrix, 0)
+
+    return distance_matrix

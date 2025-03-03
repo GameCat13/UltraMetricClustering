@@ -1,5 +1,6 @@
 import numpy as np
 import os
+from scipy.spatial.distance import pdist, squareform
 
 # Ввод ультраметрической матрицы расстояний
 def input_matrix_manually():
@@ -32,6 +33,29 @@ def generate_ultrametric(n):
                 matrix[i, j] = min(matrix[i, j], max(matrix[i, k], matrix[k, j]))
     return matrix
 
+
+def generate_random_distance_matrix(n_points, n_dimensions=2, random_seed=None):
+    """
+    Генерирует случайную матрицу расстояний.
+
+    :param n_points: Количество точек.
+    :param n_dimensions: Размерность пространства (по умолчанию 2D).
+    :param random_seed: Сид для воспроизводимости результатов.
+    :return: Матрица расстояний (n_points x n_points).
+    """
+    if random_seed is not None:
+        np.random.seed(random_seed)
+
+    # Генерация случайных точек в n-мерном пространстве
+    points = np.random.rand(n_points, n_dimensions)
+
+    # Вычисление попарных расстояний
+    distances = pdist(points, metric='euclidean')
+
+    # Преобразование в квадратную матрицу расстояний
+    distance_matrix = squareform(distances)
+
+    return distance_matrix
 
 def load_matrix_from_file():
     """
