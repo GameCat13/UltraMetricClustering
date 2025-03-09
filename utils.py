@@ -71,3 +71,22 @@ def build_block_matrix(Z, n):
         clusters.append(new_cluster)
 
     return distance_matrix
+
+def build_ultrametric_matrices(methods, n):
+    matrices = {}
+    for method in methods:
+        matrices[method] = build_block_matrix(methods[method], n)
+    return matrices
+
+
+def l1_norm(matrix1, matrix2):
+    difference = matrix1 - matrix2
+    return np.linalg.norm(difference, ord=1)
+
+def l2_norm(matrix1, matrix2):
+    difference = matrix1 - matrix2
+    return np.linalg.norm(difference, ord=2)
+
+def linf_norm(matrix1, matrix2):
+    difference = matrix1 - matrix2
+    return np.linalg.norm(difference, ord=np.inf)

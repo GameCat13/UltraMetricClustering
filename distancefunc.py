@@ -1,6 +1,6 @@
 import numpy as np
 
-def matrix_distance(matrix1, matrix2, norm_type='fro'):
+def matrix_distance(matrix1, matrix2, norm_type=1):
     """
     Вычисляет расстояние между двумя матрицами с использованием нормы.
     :param matrix1: Первая матрица (numpy array).
@@ -12,14 +12,30 @@ def matrix_distance(matrix1, matrix2, norm_type='fro'):
     return np.linalg.norm(difference, ord=norm_type)
 
 
-def relative_error(matrix1, matrix2):
+def relative_error(matrix1, matrix2, norm='l1_norm', percent=True):
     """
-    Вычисляет среднюю относительную ошибку между двумя матрицами расстояний, игнорируя диагональ.
+    Вычисляет относительную ошибку между двумя матрицами расстояний, игнорируя диагональ.
     :param matrix1: Первая матрица расстояний (numpy array).
     :param matrix2: Вторая матрица расстояний (numpy array).
-    :return: Средняя относительная ошибка вне диагонали.
+    :param norm: Норма для вычисления ошибки ('L1', 'L2', 'Linf').
+    :return: Относительная ошибка вне диагонали.
     """
-    mask = np.eye(matrix1.shape[0]) == 0 # Маска для выделения внедиагональных элементов
+    # Маска для выделения внедиагональных элементов
+    mask = np.eye(matrix1.shape[0]) == 0
     masked_matrix1 = matrix1[mask]
     masked_matrix2 = matrix2[mask]
-    return np.mean(np.abs((masked_matrix1 - masked_matrix2) / masked_matrix1))
+
+    # Вычисление разности между матрицами
+    diff = masked_matrix1 - masked_matrix2
+
+    # Выбор нормы
+    if norm == 'l1_norm':
+        error = np.linalg.norm(diff, ord=1) / np.linalg.norm(masked_matrix1, ord=1)
+    elif norm == 'l2_norm':
+        error = np.linalg.norm(diff, ord=2) / np.linalg.norm(masked_matrix1, ord=2)
+    elif norm == 'linf_norm':
+        error = np.linalg.norm(diff, ord=np.inf) / np.linalg.norm(masked_matrix1, ord=np.inf)
+    else:
+        raise ValueError("Норма должна быть 'L1', 'L2' или 'Linf'.")
+
+    return error * 100 if percent else error

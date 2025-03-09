@@ -34,15 +34,38 @@ def generate_ultrametric(n):
     return matrix
 
 
-def generate_random_distance_matrix(n_points, n_dimensions=2, random_seed=None):
+def generate_random_distance_matrix(n_points, n_dimensions=2, metric='euclidean', integer_values=False, random_seed=None):
     """
     Генерирует случайную матрицу расстояний.
 
-    :param n_points: Количество точек.
-    :param n_dimensions: Размерность пространства (по умолчанию 2D).
-    :param random_seed: Сид для воспроизводимости результатов.
-    :return: Матрица расстояний (n_points x n_points).
+    Параметры:
+    -----------
+    n_points : int
+        Количество точек.
+    n_dimensions : int, optional
+        Размерность пространства (по умолчанию 2D).
+    metric : str, optional
+        Метрика для вычисления расстояний. По умолчанию 'euclidean'.
+        Другие варианты: 'cityblock', 'cosine', 'chebyshev', 'hamming' и т.д.
+    integer_values : bool, optional
+        Если True, расстояния округляются до целых чисел. По умолчанию False.
+    random_seed : int, optional
+        Сид для воспроизводимости результатов. По умолчанию None.
+
+    Возвращает:
+    -----------
+    distance_matrix : ndarray
+        Матрица расстояний размером n_points x n_points.
     """
+    # Проверка входных данных
+    if n_points <= 0:
+        raise ValueError("Количество точек должно быть положительным числом.")
+    if n_dimensions <= 0:
+        raise ValueError("Размерность пространства должна быть положительным числом.")
+    if metric not in ['euclidean', 'cityblock', 'cosine', 'chebyshev', 'hamming']:
+        raise ValueError("Неподдерживаемая метрика.")
+
+    # Установка сида для воспроизводимости
     if random_seed is not None:
         np.random.seed(random_seed)
 
@@ -50,10 +73,14 @@ def generate_random_distance_matrix(n_points, n_dimensions=2, random_seed=None):
     points = np.random.rand(n_points, n_dimensions)
 
     # Вычисление попарных расстояний
-    distances = pdist(points, metric='euclidean')
+    distances = pdist(points, metric=metric)
 
     # Преобразование в квадратную матрицу расстояний
     distance_matrix = squareform(distances)
+
+    # Округление до целых чисел, если требуется
+    if integer_values:
+        distance_matrix = np.round(distance_matrix*1000).astype(int)
 
     return distance_matrix
 

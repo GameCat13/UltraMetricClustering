@@ -41,42 +41,12 @@ def minimax_distance(cluster1, cluster2, distance_matrix):
     return (min_dist + max_dist) / 2
 
 
-def median_distance(cluster1, cluster2, distance_matrix):
-    """
-    Вычисляет расстояние между двумя кластерами на основе медианного метода.
-    :param cluster1: Первый кластер (список индексов объектов).
-    :param cluster2: Второй кластер (список индексов объектов).
-    :param distance_matrix: Матрица расстояний между объектами.
-    :return: Расстояние между кластерами.
-    """
-    # Если один из кластеров пуст, возвращаем 0
-    if len(cluster1) == 0 or len(cluster2) == 0:
-        return 0.0
-
-    # Если оба кластера содержат по одной точке, возвращаем расстояние между ними
-    if len(cluster1) == 1 and len(cluster2) == 1:
-        return distance_matrix[cluster1[0], cluster2[0]]
-
-    # Если один кластер содержит одну точку, а другой — две точки
-    if len(cluster1) == 1 and len(cluster2) == 2:
-        # Формируем треугольник из точки cluster1 и двух точек cluster2
-        triangle_distances = [
-            distance_matrix[cluster1[0], cluster2[0]],
-            distance_matrix[cluster1[0], cluster2[1]],
-            distance_matrix[cluster2[0], cluster2[1]]
-        ]
-        # Вычисляем медиану расстояний в треугольнике
-        return np.median(triangle_distances)
-
-    # Если оба кластера содержат по две точки
-    if len(cluster1) == 2 and len(cluster2) == 2:
-        # Вычисляем все попарные расстояния между точками из двух кластеров
-        distances = distance_matrix[np.ix_(cluster1, cluster2)]
-        # Вычисляем медиану всех расстояний
-        return np.median(distances)
-
-    # Для кластеров с большим количеством точек
-    distances = distance_matrix[np.ix_(cluster1, cluster2)]
+def median_distance(cluster1_indices, cluster2_indices, distance_matrix):
+    """Вычисляет медианное расстояние между двумя кластерами."""
+    distances = []
+    for i in cluster1_indices:
+        for j in cluster2_indices:
+            distances.append(distance_matrix[i, j])
     return np.median(distances)
 
 def custom_linkage(distance_matrix, method, verbose=False):
