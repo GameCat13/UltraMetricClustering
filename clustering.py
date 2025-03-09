@@ -160,7 +160,32 @@ def custom_linkage(distance_matrix, method, verbose=False):
             end_time = time.time()
             print(f"Время выполнения шага: {end_time - start_time:.4f} секунд")
     return np.array(Z)
+def recursive_minimax_linkage(clusters, distance_matrix, Z=None, verbose=False):
+    if Z is None:
+        Z = []
+    if len(clusters) <= 1:
+        return np.array(Z) # Базовый случай: один или ноль кластеров
 
+    min_dist = float('inf')
+    best_pair = (None, None)
+
+    for i in range(len(clusters)):
+        for j in range(i + 1, len(clusters)):
+            dist = minimax_distance(_get_cluster_indices(clusters[i]), _get_cluster_indices(clusters[j]), distance_matrix)
+            if dist < min_dist:
+                min_dist = dist
+                best_pair = (i, j)
+
+    cluster1_index, cluster2_index = best_pair
+    new_cluster = ClusterNode(id=len(clusters) , left=clusters[cluster1_index], right=clusters[cluster2_index], size=clusters[cluster1_index].size + clusters[cluster2_index].size)
+    remaining_clusters = [c for k, c in enumerate(clusters) if k not in (cluster1_index, cluster2_index)]
+    new_clusters = remaining_clusters + [new_cluster]
+
+    # Добавляем информацию о слиянии в матрицу Z
+    Z.append([clusters[cluster1_index].id, clusters[cluster2_index].id, min_dist, new_cluster.size])
+
+
+    return recursive_minimax_linkage(new_clusters, distance_matrix, Z, verbose)
 def _get_cluster_indices(node):
     """
     Рекурсивно получает все индексы объектов в кластере.

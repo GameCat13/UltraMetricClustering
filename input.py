@@ -59,16 +59,32 @@ def generate_random_distance_matrix(n_points, n_dimensions=2, random_seed=None):
 
 def load_matrix_from_file():
     """
-    Загрузка матрицы из файла.
+    Загрузка матрицы из файла, обрабатывая возможные ошибки.
 
     Возвращает:
-    ----------
-    matrix : ndarray
-        Загруженная матрица.
+        ndarray: Загруженная матрица или None в случае ошибки.
     """
     filename = input("Введите имя файла: ")
     if not os.path.exists(filename):
         print(f"Файл {filename} не найден!")
         return None
-    matrix = np.loadtxt(filename)
-    return matrix
+
+    try:
+        matrix = np.loadtxt(filename, delimiter=' ', dtype=np.float64) # delimiter=' ' - предполагаем, что разделитель - пробел
+        # Проверка на квадратность матрицы и наличие нулей на главной диагонали
+        rows, cols = matrix.shape
+        if rows != cols:
+            print("Ошибка: матрица не является квадратной")
+            return None
+        if not np.allclose(np.diag(matrix), 0):
+            print("Ошибка: на главной диагонали не нули")
+            return None
+
+        return matrix
+
+    except ValueError as e:
+        print(f"Ошибка при загрузке матрицы: {e}. Проверьте формат файла.")
+        return None
+    except Exception as e:
+        print(f"Произошла непредвиденная ошибка: {e}")
+        return None

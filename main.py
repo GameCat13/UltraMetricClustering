@@ -3,12 +3,14 @@ from scipy.cluster.hierarchy import dendrogram, linkage
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-from input import input_matrix_manually, generate_ultrametric, load_matrix_from_file,generate_random_distance_matrix
-from save import save_matrix
-from clustering import custom_linkage, minimax_distance, create_ultrametric_distance_matrix, median_distance
+from input import *
+from save import *
+from clustering import *
 from visualization import visualize_matrix
-from utils import is_ultrametric
-from distancefunc import matrix_distance,relative_error
+from utils import *
+from distancefunc import *
+
+
 
 # Проверка монотонности
 def is_monotonic(Z):
@@ -43,6 +45,7 @@ def main():
         print(f"Время поиска матрицы: {end_time - start_time:.4f} секунд")
     elif choice == "3":
         matrix = load_matrix_from_file()
+        matrix = np.array(matrix, dtype=np.float64) # принудительное преобразование к float64
         #while not is_ultrametric(matrix):
         #    if is_ultrametric(matrix) == False:
         #        print("матрица не ультраметрична!")
@@ -74,21 +77,40 @@ def main():
 
     # Кастом линкейдж для построения дендрограммы
     start_time = time.time()
-    Z_median = custom_linkage(matrix, method=median_distance)
+    initial_clusters = [ClusterNode(i) for i in range(matrix.shape[0])]
+    #Z_recur_minimax = recursive_minimax_linkage(initial_clusters, matrix, verbose=True)
     # Замеряем время окончания шага и выводим время выполнения
     end_time = time.time()
-    print(f"время кластеризации median: {end_time - start_time:.4f} секунд")
+    print(f"время кластеризации Rminimax: {end_time - start_time:.4f} секунд")
+
+    # Кастом линкейдж для построения дендрограммы
+    #start_time = time.time()
+    #Z_median = custom_linkage(matrix, method=median_distance)
+    # Замеряем время окончания шага и выводим время выполнения
+    #end_time = time.time()
+    #print(f"время кластеризации median: {end_time - start_time:.4f} секунд")
 
     start_time = time.time()
-    Z_complete = linkage(matrix, method='complete')
-    Z_average = linkage(matrix, method='average')
-    Z_ward = linkage(matrix, method='ward')
+    condensed_matrix = squareform(matrix)
+    Z_complete = linkage(condensed_matrix, method='complete')
+    print("Финальная матрица связей complete Z:")
+    print(Z_complete)
+    Z_average = linkage(condensed_matrix, method='average')
+    Z_ward = linkage(condensed_matrix, method='ward')
     end_time = time.time()
     print(f"время кластеризации: {end_time - start_time:.4f} секунд")
     #print("Является ли кластеризация монотонной?", is_monotonic(Z_custom))
     # Выводим финальную матрицу связей Z
-    #print("Финальная матрица связей Z:")
-    #print(Z_custom)
+    print("Финальная матрица связей Z:")
+    print(Z_minmax)
+
+    # Построение ультраметрической матрицы
+    n = matrix.shape[0]  # Количество объектов
+    print(n)
+    ultrametric_matrix = build_block_matrix(Z_minmax, n)
+
+    print("Ультраметрическая матрица minmax:")
+    print(ultrametric_matrix)
 
     # Строим дендрограмму
     plt.figure(figsize=(10, 5))
@@ -98,10 +120,13 @@ def main():
     plt.ylabel("Расстояние")
     plt.show()
 
+
+
     n = matrix.shape[0]
     # Создаём ультраметрическую матрицу расстояний
     ultrametric_matrix_minmax = create_ultrametric_distance_matrix(Z_minmax, n)
-    ultrametric_matrix_median = create_ultrametric_distance_matrix(Z_median, n)
+    #ultrametric_matrix_recur_minmax = create_ultrametric_distance_matrix(Z_recur_minimax, n)
+    #ultrametric_matrix_median = create_ultrametric_distance_matrix(Z_median, n)
     ultrametric_matrix_complete = create_ultrametric_distance_matrix(Z_complete, n)
     ultrametric_matrix_average = create_ultrametric_distance_matrix(Z_average, n)
     ultrametric_matrix_ward = create_ultrametric_distance_matrix(Z_ward, n)
@@ -109,8 +134,11 @@ def main():
     print("Ультраметрическая матрица расстояний minmax:")
     print(ultrametric_matrix_minmax)
 
-    print("Ультраметрическая матрица расстояний median:")
-    print(ultrametric_matrix_median)
+    #print("Ультраметрическая матрица расстояний recur minmax:")
+    #print(ultrametric_matrix_recur_minmax)
+
+    #print("Ультраметрическая матрица расстояний median:")
+    #print(ultrametric_matrix_median)
 
     print("Ультраметрическая матрица расстояний complete:")
     print(ultrametric_matrix_complete)
@@ -127,11 +155,11 @@ def main():
     distance = relative_error(matrix,ultrametric_matrix_minmax)
     print("Относительная ошибка minmax:", distance)
 
-    distance = matrix_distance(matrix, ultrametric_matrix_median)
-    print("Расстояние между матрицами (Frobenius) median:", distance)
+    #distance = matrix_distance(matrix, ultrametric_matrix_median)
+    #print("Расстояние между матрицами (Frobenius) median:", distance)
 
-    distance = relative_error(matrix, ultrametric_matrix_median)
-    print("Относительная ошибка median:", distance)
+    #distance = relative_error(matrix, ultrametric_matrix_median)
+    #print("Относительная ошибка median:", distance)
 
     distance = matrix_distance(matrix, ultrametric_matrix_complete)
     print("Расстояние между матрицами (Frobenius) complete:", distance)
@@ -150,6 +178,39 @@ def main():
 
     distance = relative_error(matrix, ultrametric_matrix_ward)
     print("Относительная ошибка ward:", distance)
+
+    # Создаем фигуру с двумя подграфиками
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+    # Первая дендрограмма (minmax)
+    dendrogram(Z_minmax, ax=axes[0, 0])
+    axes[0, 0].set_title('Дендрограмма minmax')
+    axes[0, 0].set_xlabel('Объекты')
+    axes[0, 0].set_ylabel('Расстояние')
+
+    # Вторая дендрограмма (complete)
+    dendrogram(Z_complete, ax=axes[0, 1])
+    axes[0, 1].set_title('Дендрограмма complete')
+    axes[0, 1].set_xlabel('Объекты')
+    axes[0, 1].set_ylabel('Расстояние')
+
+    # Третья дендрограмма (average)
+    dendrogram(Z_average, ax=axes[1, 0])
+    axes[1, 0].set_title('Дендрограмма average')
+    axes[1, 0].set_xlabel('Объекты')
+    axes[1, 0].set_ylabel('Расстояние')
+
+    # Четвертая дендрограмма (ward)
+    dendrogram(Z_ward, ax=axes[1, 1])
+    axes[1, 1].set_title('Дендрограмма ward')
+    axes[1, 1].set_xlabel('Объекты')
+    axes[1, 1].set_ylabel('Расстояние')
+
+    # Настраиваем отступы между подграфиками
+    plt.tight_layout()
+
+    # Показываем график
+    plt.show()
 
 if __name__ == "__main__":
     main()

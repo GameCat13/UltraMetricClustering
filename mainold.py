@@ -1,64 +1,51 @@
+import numpy as np
 
-from scipy.cluster.hierarchy import dendrogram, linkage
-from save import save_matrix
-from visualization import visualize_matrix
-from utils import is_ultrametric
-import matplotlib.pyplot as plt
-from input import input_matrix_manually, generate_ultrametric, load_matrix_from_file
-import time
-def main():
-  print("Выберите способ создания матрицы:")
-  print("1. Ввести матрицу вручную")
-  print("2. Сгенерировать матрицу")
-  print("3. Загрузить матрицу из файла")
-  choice = input("Ваш выбор (1/2/3): ")
+# Вектор Z, полученный после кластеризации
+Z = np.array([
+    [2., 3., 1., 2.],
+    [0., 1., 1., 2.],
+    [4., 5., 2.5, 4.]
+])
 
-  if choice == "1":
-    ultrametric_matrix = input_matrix_manually()
-  elif choice == "2":
-    start_time = time.time()
-    ultrametric_matrix = generate_ultrametric()
-    while not is_ultrametric(ultrametric_matrix):
-      ultrametric_matrix = generate_ultrametric()
-    end_time = time.time()
-    print(f"Время поиска матрицы: {end_time - start_time:.4f} секунд")
-  elif choice == "3":
-    ultrametric_matrix = load_matrix_from_file()
-    while not is_ultrametric(ultrametric_matrix):
-      if is_ultrametric(ultrametric_matrix) == False:
-        print("матрица не ультраметрична!")
-    if ultrametric_matrix is None:
-      return
-  else:
-    print("Неверный выбор!")
-    return
+# Количество объектов
+n = 4
 
-  print("\nМатрица успешно создана/загружена:")
-  print(ultrametric_matrix)
 
-  if choice == "1" or choice == "2":
-    save_choice = input("Хотите сохранить матрицу в файл? (y/n): ").lower()
-    if save_choice == "y":
-      save_matrix(ultrametric_matrix)
+# Функция для построения блочной матрицы расстояний
+def build_block_matrix(Z, n):
+    # Инициализация матрицы расстояний
+    distance_matrix = np.zeros((n, n))
 
-  print(ultrametric_matrix)
-  # Тепловая карта
-  visualize_matrix(ultrametric_matrix)
+    # Список для хранения кластеров
+    clusters = [[i] for i in range(n)]
 
-  # Преобразуем матрицу расстояний в сжатую форму (condensed form)
-  from scipy.spatial.distance import squareform
-  condensed_matrix = squareform(ultrametric_matrix)
+    # Проходим по всем строкам Z
+    for row in Z:
+        cluster1, cluster2, distance, _ = row
+        cluster1, cluster2 = int(cluster1), int(cluster2)
 
-  # Выполняем иерархическую кластеризацию методом Complete
-  Z = linkage(condensed_matrix, method='complete')
+        # Получаем объекты из объединяемых кластеров
+        objects1 = clusters[cluster1]
+        objects2 = clusters[cluster2]
 
-  # Визуализируем дендрограмму
-  plt.figure(figsize=(10, 5))
-  dendrogram(Z)
-  plt.title('Дендрограмма иерархической кластеризации (Complete)')
-  plt.xlabel('Индекс точки')
-  plt.ylabel('Расстояние')
-  plt.show()
+        # Обновляем расстояния между всеми объектами из двух кластеров
+        for i in objects1:
+            for j in objects2:
+                distance_matrix[i, j] = distance
+                distance_matrix[j, i] = distance
 
-if __name__ == "__main__":
-    main()
+        # Обновляем расстояния внутри нового кластера (если нужно)
+        # В данном случае это не требуется, так как расстояния внутри кластеров уже заданы
+
+        # Объединяем кластеры
+        new_cluster = objects1 + objects2
+        clusters.append(new_cluster)
+
+    return distance_matrix
+
+
+# Построение блочной матрицы расстояний
+block_matrix = build_block_matrix(Z, n)
+
+print("Блочная матрица расстояний:")
+print(block_matrix)
