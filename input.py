@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from scipy.spatial.distance import pdist, squareform
+import pickle
 
 # Ввод ультраметрической матрицы расстояний
 def input_matrix_manually():
@@ -36,7 +37,7 @@ def generate_ultrametric(n):
 
 def generate_random_distance_matrix(n_points, n_dimensions=2, metric='euclidean', integer_values=False, random_seed=None):
     """
-    Генерирует случайную матрицу расстояний.
+    Генерирует случайную матрицу расстояний и точки в круге (2D) или шаре (3D и выше) с радиусом от 0 до 100.
 
     Параметры:
     -----------
@@ -56,6 +57,10 @@ def generate_random_distance_matrix(n_points, n_dimensions=2, metric='euclidean'
     -----------
     distance_matrix : ndarray
         Матрица расстояний размером n_points x n_points.
+    points : ndarray
+        Массив точек размером n_points x n_dimensions.
+    random_seed : int
+        Сид, использованный для генерации.
     """
     # Проверка входных данных
     if n_points <= 0:
@@ -66,11 +71,24 @@ def generate_random_distance_matrix(n_points, n_dimensions=2, metric='euclidean'
         raise ValueError("Неподдерживаемая метрика.")
 
     # Установка сида для воспроизводимости
-    if random_seed is not None:
-        np.random.seed(random_seed)
+    rng = np.random.default_rng(random_seed)  # Используем Generator
+    if random_seed is None:
+        random_seed = rng.integers(0, 2**32 - 1, dtype=np.uint32)  # Генерация случайного сида
 
-    # Генерация случайных точек в n-мерном пространстве
-    points = np.random.rand(n_points, n_dimensions)
+    # Генерация случайных точек в круге (2D) или шаре (3D и выше) с радиусом от 0 до 100
+    if n_dimensions == 2:
+        # Генерация точек в круге
+        radius = rng.uniform(0, 100, n_points)  # Случайный радиус от 0 до 100
+        angle = rng.uniform(0, 2 * np.pi, n_points)  # Случайный угол
+        x = radius * np.cos(angle)
+        y = radius * np.sin(angle)
+        points = np.column_stack((x, y))
+    else:
+        # Генерация точек в шаре
+        radius = rng.uniform(0, 100, n_points) ** (1/n_dimensions)  # Случайный радиус от 0 до 100
+        direction = rng.normal(size=(n_points, n_dimensions))  # Случайное направление
+        direction /= np.linalg.norm(direction, axis=1)[:, np.newaxis]  # Нормализация
+        points = radius[:, np.newaxis] * direction
 
     # Вычисление попарных расстояний
     distances = pdist(points, metric=metric)
@@ -80,9 +98,9 @@ def generate_random_distance_matrix(n_points, n_dimensions=2, metric='euclidean'
 
     # Округление до целых чисел, если требуется
     if integer_values:
-        distance_matrix = np.round(distance_matrix*1000).astype(int)
+        distance_matrix = np.round(distance_matrix)
 
-    return distance_matrix
+    return distance_matrix, points, random_seed
 
 def load_matrix_from_file():
     """
@@ -115,3 +133,39 @@ def load_matrix_from_file():
     except Exception as e:
         print(f"Произошла непредвиденная ошибка: {e}")
         return None
+
+
+def load_experiment(experiment_dir, seed=None):
+    """
+    Загружает результаты эксперимента по сиду или все эксперименты, если сид не указан.
+
+    Параметры:
+    -----------
+    experiment_dir : str
+        Папка, где сохранены результаты экспериментов.
+    seed : int, optional
+        Сид эксперимента. Если None, загружаются все эксперименты.
+
+    Возвращает:
+    -----------
+    results : dict или list
+        Если указан seed, возвращает словарь с результатами одного эксперимента.
+        Если seed не указан, возвращает список словарей с результатами всех экспериментов.
+    """
+    if seed is not None:
+        # Загружаем один эксперимент
+        file_path = os.path.join(experiment_dir, f"experiment_{seed}.pkl")
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Эксперимент с сидом {seed} не найден.")
+
+        with open(file_path, 'rb') as f:
+            return pickle.load(f)
+    else:
+        # Загружаем все эксперименты
+        results = []
+        for file_name in os.listdir(experiment_dir):
+            if file_name.startswith("experiment_") and file_name.endswith(".pkl"):
+                file_path = os.path.join(experiment_dir, file_name)
+                with open(file_path, 'rb') as f:
+                    results.append(pickle.load(f))
+        return results

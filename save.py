@@ -20,3 +20,26 @@ def save_matrix(matrix):
         t += 1
     np.savetxt(filename, matrix, fmt="%.6f")
     print(f"Матрица сохранена в файл: {filename}")
+
+
+import pickle
+
+def save_experiment(results, experiment_dir, experiment_name):
+    """
+    Сохраняет результаты эксперимента в файл.
+
+    Параметры:
+    -----------
+    results : dict
+        Словарь с результатами эксперимента.
+    experiment_dir : str
+        Папка для сохранения.
+    experiment_name : str
+        Имя файла.
+    """
+    if not os.path.exists(experiment_dir):
+        os.makedirs(experiment_dir)
+
+    file_path = os.path.join(experiment_dir, f"{experiment_name}.pkl")
+    with open(file_path, 'wb') as f:
+        pickle.dump(results, f)

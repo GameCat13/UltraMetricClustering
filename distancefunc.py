@@ -19,9 +19,9 @@ def matrix_distance(matrix1, matrix2, norm_type=1):
     # Вычисление нормы
     if norm_type == 'fro':
         distance = np.linalg.norm(difference, ord='fro')
-    elif norm_type == 'L1':
+    elif norm_type == 'L1' or norm_type == 1:
         distance = np.sum(np.abs(difference))
-    elif norm_type == 'L2':
+    elif norm_type == 'L2' or norm_type == 2:
         distance = np.linalg.norm(difference, ord='fro')
     elif norm_type == np.inf:
         distance = np.max(np.abs(difference))

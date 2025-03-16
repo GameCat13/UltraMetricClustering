@@ -142,7 +142,7 @@ def main():
 
     calculate_and_print_all_distances(matrix, ultrametric_matrices)
 
-    plot_dendrograms(methods, methods)
+    plot_dendrograms(methods)
 
 if __name__ == "__main__":
     main()
