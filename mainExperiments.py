@@ -123,12 +123,29 @@ def calculate_summary_table(all_results):
             data[method]['L2'].append(L2)
             data[method]['Linf'].append(Linf)
 
+    # Нормализуем данные для каждой метрики отдельно
+    for metric in metrics:
+        # Собираем все значения для текущей метрики
+        all_values = np.concatenate([data[method][metric] for method in methods])
+        # Нормализуем все значения
+        normalized_values = normalize_data(all_values)
+        # Разделяем нормализованные значения обратно по методам
+        start_idx = 0
+        for method in methods:
+            end_idx = start_idx + len(data[method][metric])
+            data[method][metric] = normalized_values[start_idx:end_idx]
+            start_idx = end_idx
+
     # Вычисляем количество выигрышей
     for result in all_results:
         for metric_idx, metric in enumerate(metrics):
-            # Находим метод с минимальным расстоянием для текущей метрики
-            best_method = min(result['distances'], key=lambda x: x[metric_idx + 1])[0]
-            wins[best_method][metric] += 1
+            try:
+                # Находим метод с минимальным расстоянием для текущей метрики
+                best_method = min(result['distances'], key=lambda x: float(x[metric_idx + 1]))[0]
+                wins[best_method][metric] += 1
+            except (ValueError, IndexError) as e:
+                print(f"Ошибка в данных: {e}")
+                print(f"Результат: {result}")
 
     # Вычисляем среднее, дисперсию и добавляем количество выигрышей
     summary_table = {}
@@ -137,20 +154,41 @@ def calculate_summary_table(all_results):
         for metric in metrics:
             values = data[method][metric]
             mean = np.mean(values)
-            var = np.var(values)
+            var = np.var(values, ddof=1)  # Используем выборочную дисперсию
             row.extend([mean, var, wins[method][metric]])  # Добавляем среднее, дисперсию и выигрыши
 
         summary_table[method] = row
 
     return summary_table
 
+def normalize_data(values):
+    """
+    Нормализует данные с использованием Min-Max Normalization.
+
+    Параметры:
+    -----------
+    values : list или np.array
+        Список значений для нормализации.
+
+    Возвращает:
+    -----------
+    normalized_values : np.array
+        Нормализованные значения.
+    """
+    min_val = np.min(values)
+    max_val = np.max(values)
+    if max_val == min_val:
+        return np.zeros_like(values)  # Если все значения одинаковы
+    return (values - min_val) / (max_val - min_val)
+
 def main():
 
-    n_points = 10
-    n_dimensions = 2
-    metric = 'euclidean'
+    n_points = 100
+    n_dimensions = 3
+    metric = 'euclidean' #'euclidean', 'cityblock', 'cosine', 'chebyshev', 'hamming':
     integer_values = False
-    numbersofexp = 3
+    numbersofexp = 1000
+    run = True
 
     """
     Проводит 100 экспериментов и сохраняет результаты.
@@ -166,16 +204,13 @@ def main():
     integer_values : bool, optional
         Если True, расстояния округляются до целых чисел. По умолчанию False.
     """
+    experiment_dir = f"experiment_{metric}_{n_dimensions}D_{n_points}"
 
-
-    experiment_dir = f"experiment_{n_points}"
-    for i in range(numbersofexp):
-        print(f"Эксперимент {i + 1}/{numbersofexp}")
-        results = run_experiment(n_points, n_dimensions, metric, integer_values)
-        save_experiment(results, experiment_dir, f"experiment_{results['random_seed']}")
-
-    # Папка с результатами экспериментов
-    experiment_dir = "experiment_10"  # Например, для 10 точек
+    if run == True:
+        for i in range(numbersofexp):
+            print(f"Эксперимент {i + 1}/{numbersofexp}")
+            results = run_experiment(n_points, n_dimensions, metric, integer_values)
+            save_experiment(results, experiment_dir, f"experiment_{results['random_seed']}")
 
     # Загружаем все эксперименты
     all_results = load_experiment(experiment_dir)

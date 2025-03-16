@@ -5,9 +5,9 @@ from input import*
 from visualization import*
 
 
-dimen = 1
+dimen = 10
 
-distance_matrix, points = generate_random_distance_matrix(n_points=100, n_dimensions=dimen)
+distance_matrix, points, seed = generate_random_distance_matrix(n_points=10, n_dimensions=dimen, metric='hamming')
 
 print("Матрица расстояний:")
 print(distance_matrix)

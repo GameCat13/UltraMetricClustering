@@ -35,6 +35,30 @@ def generate_ultrametric(n):
     return matrix
 
 
+def generate_binary_points(n_points, n_dimensions, random_seed=None):
+    """
+    Генерирует случайные бинарные точки.
+
+    Параметры:
+    -----------
+    n_points : int
+        Количество точек.
+    n_dimensions : int
+        Размерность пространства.
+    random_seed : int, optional
+        Сид для воспроизводимости результатов.
+
+    Возвращает:
+    -----------
+    points : ndarray
+        Массив бинарных точек размером (n_points, n_dimensions).
+    """
+    if random_seed is not None:
+        np.random.seed(random_seed)
+
+    # Генерация бинарных точек (0 или 1)
+    points = np.random.randint(2, size=(n_points, n_dimensions))
+    return points
 def generate_random_distance_matrix(n_points, n_dimensions=2, metric='euclidean', integer_values=False, random_seed=None):
     """
     Генерирует случайную матрицу расстояний и точки в круге (2D) или шаре (3D и выше) с радиусом от 0 до 100.
@@ -74,21 +98,25 @@ def generate_random_distance_matrix(n_points, n_dimensions=2, metric='euclidean'
     rng = np.random.default_rng(random_seed)  # Используем Generator
     if random_seed is None:
         random_seed = rng.integers(0, 2**32 - 1, dtype=np.uint32)  # Генерация случайного сида
-
-    # Генерация случайных точек в круге (2D) или шаре (3D и выше) с радиусом от 0 до 100
-    if n_dimensions == 2:
-        # Генерация точек в круге
-        radius = rng.uniform(0, 100, n_points)  # Случайный радиус от 0 до 100
-        angle = rng.uniform(0, 2 * np.pi, n_points)  # Случайный угол
-        x = radius * np.cos(angle)
-        y = radius * np.sin(angle)
-        points = np.column_stack((x, y))
+    # Генерация точек
+    if metric == 'hamming':
+        # Генерация бинарных точек для метрики Хэмминга
+        points = generate_binary_points(n_points, n_dimensions, random_seed)
     else:
-        # Генерация точек в шаре
-        radius = rng.uniform(0, 100, n_points) ** (1/n_dimensions)  # Случайный радиус от 0 до 100
-        direction = rng.normal(size=(n_points, n_dimensions))  # Случайное направление
-        direction /= np.linalg.norm(direction, axis=1)[:, np.newaxis]  # Нормализация
-        points = radius[:, np.newaxis] * direction
+        # Генерация случайных точек в круге (2D) или шаре (3D и выше) с радиусом от 0 до 100
+        if n_dimensions == 2:
+            # Генерация точек в круге
+            radius = rng.uniform(0, 100, n_points)  # Случайный радиус от 0 до 100
+            angle = rng.uniform(0, 2 * np.pi, n_points)  # Случайный угол
+            x = radius * np.cos(angle)
+            y = radius * np.sin(angle)
+            points = np.column_stack((x, y))
+        else:
+            # Генерация точек в шаре
+            radius = rng.uniform(0, 100, n_points) ** (1/n_dimensions)  # Случайный радиус от 0 до 100
+            direction = rng.normal(size=(n_points, n_dimensions))  # Случайное направление
+            direction /= np.linalg.norm(direction, axis=1)[:, np.newaxis]  # Нормализация
+            points = radius[:, np.newaxis] * direction
 
     # Вычисление попарных расстояний
     distances = pdist(points, metric=metric)
