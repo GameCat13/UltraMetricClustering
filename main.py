@@ -37,7 +37,7 @@ def main():
         matrix = input_matrix_manually()
     elif choice == "2":
         n = int(input("Введите размерность матрицы (n): "))
-        matrix = generate_random_distance_matrix(n_points=n, integer_values=True)
+        matrix = generate_random_distance_matrix(n_points=n, integer_values=False)
     elif choice == "3":
         matrix = load_matrix_from_file()
         matrix = np.array(matrix, dtype=np.float64) # принудительное преобразование к float64
@@ -131,14 +131,16 @@ def main():
 
     # Использование разных норм
     norms = {
-        'L1': l1_norm,
-        'L2': l2_norm,
-        'L_inf': linf_norm
+        'L1': 'L1',
+        'L2': 'L2',
+        'L_inf': np.inf
     }
 
     for norm_name, norm_func in norms.items():
         print(f"Используем норму: {norm_name}")
         calculate_and_print_distances(matrix, ultrametric_matrices, norm_func)
+
+    calculate_and_print_all_distances(matrix, ultrametric_matrices)
 
     plot_dendrograms(methods, methods)
 

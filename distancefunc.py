@@ -1,16 +1,33 @@
 import numpy as np
 
+
 def matrix_distance(matrix1, matrix2, norm_type=1):
     """
     Вычисляет расстояние между двумя матрицами с использованием нормы.
     :param matrix1: Первая матрица (numpy array).
     :param matrix2: Вторая матрица (numpy array).
-    :param norm_type: Тип нормы ('fro' для Frobenius, 1 для L1, 2 для L2 и т.д.).
+    :param norm_type: Тип нормы ('fro' для Frobenius, 1 для L1, 2 для L2, np.inf для бесконечной нормы).
     :return: Расстояние между матрицами.
     """
-    difference = matrix1 - matrix2
-    return np.linalg.norm(difference, ord=norm_type)
 
+    # Разница матриц
+    difference = matrix1 - matrix2
+
+    # Если матрицы симметричны, используем верхний треугольник
+    difference = np.triu(difference, k=1)
+
+    # Вычисление нормы
+    if norm_type == 'fro':
+        distance = np.linalg.norm(difference, ord='fro')
+    elif norm_type == 'L1':
+        distance = np.sum(np.abs(difference))
+    elif norm_type == 'L2':
+        distance = np.linalg.norm(difference, ord='fro')
+    elif norm_type == np.inf:
+        distance = np.max(np.abs(difference))
+    else:
+        raise ValueError("Неподдерживаемый тип нормы. Используйте 'fro', 1, 2 или np.inf.")
+    return round(distance, 2)
 
 def relative_error(matrix1, matrix2, norm='l1_norm', percent=True):
     """
@@ -29,11 +46,11 @@ def relative_error(matrix1, matrix2, norm='l1_norm', percent=True):
     diff = masked_matrix1 - masked_matrix2
 
     # Выбор нормы
-    if norm == 'l1_norm':
+    if norm == 'L1':
         error = np.linalg.norm(diff, ord=1) / np.linalg.norm(masked_matrix1, ord=1)
-    elif norm == 'l2_norm':
+    elif norm == 'L2':
         error = np.linalg.norm(diff, ord=2) / np.linalg.norm(masked_matrix1, ord=2)
-    elif norm == 'linf_norm':
+    elif norm == np.inf:
         error = np.linalg.norm(diff, ord=np.inf) / np.linalg.norm(masked_matrix1, ord=np.inf)
     else:
         raise ValueError("Норма должна быть 'L1', 'L2' или 'Linf'.")
