@@ -59,16 +59,58 @@ def generate_binary_points(n_points, n_dimensions, random_seed=None):
     # Генерация бинарных точек (0 или 1)
     points = np.random.randint(2, size=(n_points, n_dimensions))
     return points
-def generate_random_distance_matrix(n_points, n_dimensions=2, metric='euclidean', integer_values=False, random_seed=None):
+
+def generate_random_strings(num_strings, length, alphabet, rng):
+    """
+    Генерирует случайные строки заданной длины из указанного алфавита.
+
+    Параметры:
+    -----------
+    num_strings : int
+        Количество строк.
+    length : int
+        Длина каждой строки.
+    alphabet : str
+        Алфавит для генерации строк.
+    rng : np.random.Generator
+        Генератор случайных чисел.
+
+    Возвращает:
+    -----------
+    list
+        Список сгенерированных строк.
+    """
+    return [''.join(rng.choice(list(alphabet), size=length)) for _ in range(num_strings)]
+
+def hamming_distance(s1, s2):
+    """
+    Вычисляет расстояние Хэмминга между двумя строками.
+
+    Параметры:
+    -----------
+    s1 : str
+        Первая строка.
+    s2 : str
+        Вторая строка.
+
+    Возвращает:
+    -----------
+    int
+        Расстояние Хэмминга.
+    """
+    return sum(c1 != c2 for c1, c2 in zip(s1, s2))
+
+def generate_random_distance_matrix(n_points, n_dimensions=2, metric='euclidean', integer_values=False, random_seed=None, alphabet=None, string_length=None):
     """
     Генерирует случайную матрицу расстояний и точки в круге (2D) или шаре (3D и выше) с радиусом от 0 до 100.
+    Для метрики Хэмминга генерирует строки заданной длины из указанного алфавита.
 
     Параметры:
     -----------
     n_points : int
-        Количество точек.
+        Количество точек (или строк для метрики Хэмминга).
     n_dimensions : int, optional
-        Размерность пространства (по умолчанию 2D).
+        Размерность пространства (по умолчанию 2D). Для Хэмминга игнорируется.
     metric : str, optional
         Метрика для вычисления расстояний. По умолчанию 'euclidean'.
         Другие варианты: 'cityblock', 'cosine', 'chebyshev', 'hamming' и т.д.
@@ -76,32 +118,37 @@ def generate_random_distance_matrix(n_points, n_dimensions=2, metric='euclidean'
         Если True, расстояния округляются до целых чисел. По умолчанию False.
     random_seed : int, optional
         Сид для воспроизводимости результатов. По умолчанию None.
+    alphabet : str, optional
+        Алфавит для генерации строк (только для метрики Хэмминга). По умолчанию None.
+    string_length : int, optional
+        Длина строк (только для метрики Хэмминга). По умолчанию None.
 
     Возвращает:
     -----------
     distance_matrix : ndarray
         Матрица расстояний размером n_points x n_points.
     points : ndarray
-        Массив точек размером n_points x n_dimensions.
+        Массив точек (или строк) размером n_points x n_dimensions.
     random_seed : int
         Сид, использованный для генерации.
     """
     # Проверка входных данных
     if n_points <= 0:
         raise ValueError("Количество точек должно быть положительным числом.")
-    if n_dimensions <= 0:
-        raise ValueError("Размерность пространства должна быть положительным числом.")
     if metric not in ['euclidean', 'cityblock', 'cosine', 'chebyshev', 'hamming']:
         raise ValueError("Неподдерживаемая метрика.")
+    if metric == 'hamming' and (alphabet is None or string_length is None):
+        raise ValueError("Для метрики Хэмминга необходимо указать алфавит и длину строки.")
 
     # Установка сида для воспроизводимости
     rng = np.random.default_rng(random_seed)  # Используем Generator
     if random_seed is None:
         random_seed = rng.integers(0, 2**32 - 1, dtype=np.uint32)  # Генерация случайного сида
-    # Генерация точек
+
+    # Генерация точек или строк
     if metric == 'hamming':
-        # Генерация бинарных точек для метрики Хэмминга
-        points = generate_binary_points(n_points, n_dimensions, random_seed)
+        # Генерация строк для метрики Хэмминга
+        points = generate_random_strings(n_points, string_length, alphabet, rng)
     else:
         # Генерация случайных точек в круге (2D) или шаре (3D и выше) с радиусом от 0 до 100
         if n_dimensions == 2:
@@ -119,10 +166,17 @@ def generate_random_distance_matrix(n_points, n_dimensions=2, metric='euclidean'
             points = radius[:, np.newaxis] * direction
 
     # Вычисление попарных расстояний
-    distances = pdist(points, metric=metric)
-
-    # Преобразование в квадратную матрицу расстояний
-    distance_matrix = squareform(distances)
+    if metric == 'hamming':
+        # Для метрики Хэмминга используем вашу функцию hamming_distance
+        distance_matrix = np.zeros((n_points, n_points))
+        for i in range(n_points):
+            for j in range(i + 1, n_points):
+                distance_matrix[i, j] = hamming_distance(points[i], points[j])
+                distance_matrix[j, i] = distance_matrix[i, j]  # Расстояние симметрично
+    else:
+        # Для других метрик используем pdist
+        distances = pdist(points, metric=metric)
+        distance_matrix = squareform(distances)
 
     # Округление до целых чисел, если требуется
     if integer_values:
@@ -197,3 +251,7 @@ def load_experiment(experiment_dir, seed=None):
                 with open(file_path, 'rb') as f:
                     results.append(pickle.load(f))
         return results
+
+
+
+    
